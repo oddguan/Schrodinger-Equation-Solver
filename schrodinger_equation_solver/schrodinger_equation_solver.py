@@ -13,8 +13,8 @@ def parse_args(args):
     '''
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-P', '--potential_energy', type=str, \
-    default='potential_energy.dat', \
+    parser.add_argument('-i', '--input', type=str, \
+    default='schrodinger_equation_solver/potential_energy.dat', \
     help='The path to the potential energy table')
 
     parser.add_argument('-c', type=float, required=True, \
@@ -24,8 +24,6 @@ def parse_args(args):
     parser.add_argument('-s', '--size', type=int, required=True, \
     help='The size of the basis set')
 
-    parser.add_argument('-d', '--domain', type=str, required=True, \
-    help='a domain')
     return vars(parser.parse_args(args))
 
 
@@ -93,7 +91,7 @@ def form_matrix(c, size):
         if i == 0:
             matrix = tf.constant(row, tf.float32, shape=(1,size))
         else:
-            row[i] = ((i + 1) // 2) ** 2 * (-c)
+            row[i] = ((i + 1) // 2) ** 2 * (c)
             row = tf.constant(row, tf.float32, shape=(1,size))
             matrix = tf.concat([matrix, row], 0)
     return matrix
@@ -153,26 +151,25 @@ def form_H(a_tensor, c_tensor, basis_size):
     multiply = tf.constant([basis_size])
     H = tf.reshape(tf.tile(tf.squeeze(a_tensor), multiply),[-1,basis_size])
     H = tf.transpose(H)
+    H = H + c_tensor
     #print(H)
     return H
 
-def main():
-    args = parse_args(sys.argv[1:])
-    position, potential_energy = \
-    parse_file('schrodinger_equation_solver/potential_energy.dat')
+def main(args):
+    position, potential_energy = parse_file(args['input'])
     #print("positions: ", position)
     #print("potential_energy: ", potential_energy)
     # print(potential_energy.shape[0])
     basis = form_basis(args['size'])
     #print("len of basis: ", len(basis))
     matrix = form_matrix(args['c'], args['size'])
-    #print("matrix: ", matrix)
+    print("matrix: ", matrix)
     rhs = calculate_inner_V0_b(position, potential_energy, basis)
-    #print("rhs: ", rhs)
+    print("rhs: ", rhs)
     lhs = calculate_inner_V0hat_b(position, basis)
-    #print("lhs: ", lhs)
+    print("lhs: ", lhs)
     a_tensor = tf.linalg.solve(lhs,tf.reshape(rhs,[rhs.shape[0],1]))
-    #print(a_tensor)
+    print(a_tensor)
     H = form_H(a_tensor, matrix, args['size'])
     e,v = tf.linalg.eigh(H)
     print("The lowest energy is: ", e[0].numpy())
@@ -180,4 +177,5 @@ def main():
 
 if __name__ == "__main__":
     import os; os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-    main()
+    args = parse_args(sys.argv[1:])
+    main(args)
