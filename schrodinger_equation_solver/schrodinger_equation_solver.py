@@ -5,15 +5,18 @@
 import sys
 import argparse
 import tensorflow as tf
-tf.enable_eager_execution() 
 # eager execution enables tensor to be evaluated as the program goes
+tf.enable_eager_execution() 
 
 def parse_args(args):
     '''
     Parsing arguments into variables.
 
     Args:
-        args: sys arguments variable
+        args: sys arguments variable.
+    
+    Returns:
+        The parsed dictionary of arguments
     '''
     parser = argparse.ArgumentParser()
 
@@ -37,33 +40,44 @@ def parse_file(file):
     parse the input text file into python lists
 
     Args:
-    file: the path to the input potential energy file
+        file: the path to the input potential energy file
 
     Returns:
-    position: a position tensor object
-    potential_energy: a potential energy tensor object
+        position: a position tensor object
+        potential_energy: a potential energy tensor object
     '''
     position = list()
     potential_energy = list()
     with open(file, 'r') as f:
         for i, line in enumerate(f):
             if i == 0:
+                # first line only has the headers, which are not the data 
                 continue
             else:
                 line = line.strip('\n')
-                line = line.split()
+                line = line.split() # split by spaces
                 position.append(float(line[0]))
                 potential_energy.append(float(line[1]))
+    # cast two lists into tensorflow tensors
     position = tf.constant(position, tf.float32)
     potential_energy = tf.constant(potential_energy, tf.float32)
     return position, potential_energy
         
 def fourier_n(n):
-    if n == 0:
+    '''
+    Return the nth element of the fourier basis set.
+
+    Args:
+        n: The number of the nth fourier basis set.
+    
+    Returns:
+        The nth fourier basis set.
+    '''
+    if n == 0: # first basis set element should be 1
         return lambda x: tf.ones([x.shape[0]], tf.float32)
-    elif n % 2 == 1:
+    elif n % 2 == 1: # sin function 
         return lambda x: tf.math.sin((n+1)/2 * x)
-    else:
+    else:   # cos function 
         return lambda x: tf.math.cos(n / 2 * x)
 
 def form_basis(size):
@@ -71,23 +85,14 @@ def form_basis(size):
     form the fourier basis with given size.
 
     Args:
-    size: the size of the basis set that required by the user
+        size: the size of the basis set that required by the user
 
     Returns:
-    basis: a list of basis set functions
+        basis: a list of basis set functions
     '''
     basis = list()
     for i in range(size):
         basis.append(fourier_n(i))
-        # if i == 0:
-        #     basis.append(lambda x: tf.ones([x.shape[0]], tf.float32))
-        # elif i % 2 == 1: # sin function
-        #     print((i+1)/2)
-        #     basis.append(lambda x: tf.math.sin(((i+1)/2)*x))
-        # else: #cos function
-        #     print((i)/2)
-        #     basis.append(lambda x: tf.math.cos((i/2)*x))
-    #print(basis)
     return basis
 
 def form_matrix(c, size):
@@ -96,10 +101,11 @@ def form_matrix(c, size):
     hamiltonian is -c(del^2)psi, and this function evaluates that. 
 
     Args:
-    c: the constant c
-    size: size of the basis set
+        c: the constant c.
+        size: size of the basis set.
 
     Returns:
+        matrix: a diagonal matrix that has a dimension of size x size.
 
     '''
     for i in range(size):
@@ -118,9 +124,12 @@ def calculate_inner_V0_b(position, potential_energy, basis):
     The left hand side is the inner product between V0 and the basis.
 
     Args:
-    position: a tensor that contains the position values
-    potential_energy: a tensor that contains the potential energy of the system
-    basis: a list of basis
+        position: a tensor that contains the position values.
+        potential_energy: a tensor that contains the potential energy of the system.
+        basis: a list of basis.
+
+    Returns:
+        The calcuated tensor object of the inner product between V0 and basis
     '''
     length = position.shape[0] # the length of the input data
     row = tf.reshape(tf.multiply(basis[0](position), potential_energy),[1,length])
@@ -136,7 +145,14 @@ def calculate_inner_V0_b(position, potential_energy, basis):
 
 def calculate_inner_V0hat_b(position, basis):
     '''
-    calcuate the right hand side.
+    calcuate the right hand side, which is the inner product of V0hat and basis.
+
+    Args:
+        position: a tensor that contains the position values.
+        basis: a list of basis.
+
+    Returns:
+        The result matrix that has a dimension of size x n
     '''
     basis_size = len(basis)
     position_size = position.shape[0]
@@ -155,7 +171,7 @@ def calculate_inner_V0hat_b(position, basis):
                 continue
             else:
                 m1 = tf.concat([m1,tf.reshape(bj(position),[1, position_size])], 0)
-        try:
+        try: # if it gives NameError, initialze the variable
             result
         except NameError:
             result = tf.reshape(tf.reduce_sum(tf.multiply(m1, m2),1),[1,-1])
@@ -164,14 +180,36 @@ def calculate_inner_V0hat_b(position, basis):
     return result
 
 def form_H(a_tensor, c_tensor, basis_size):
-    multiply = tf.constant([basis_size])
+    '''
+    Form the final matrix representation of the hamiltonian.
+
+    Args:
+        a_tensor: The first part of the hamiltonian representation.
+        c_tensor: The second part of the hamiltonian representation, which has
+        a constant c in it. 
+        basis_size: The size of the basis set.
+
+    Returns:
+        H: The final matrix representaton of the hamiltonian, in tensor.
+    '''
+    multiply = tf.constant([basis_size]) # for the tile function 
     H = tf.reshape(tf.tile(tf.squeeze(a_tensor), multiply),[-1,basis_size])
     H = tf.transpose(H)
     H = H + c_tensor
-    #print(H)
     return H
 
 def main(args):
+    '''
+    The main function of the program. Runs everything together in order and 
+    produce the final result. 
+
+    Args:
+        args: The parsed argument dict object.
+    
+    Returns:
+        e: The eigenvalues tensor object.
+        v: The corresponding egenvectors tensor object.
+    '''
     position, potential_energy = parse_file(args['input'])
     #print("positions: ", position)
     #print("potential_energy: ", potential_energy)
@@ -193,6 +231,7 @@ def main(args):
     return e, v
 
 if __name__ == "__main__":
+    # Suppress the error log
     import os; os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-    args = parse_args(sys.argv[1:])
-    main(args)
+    args = parse_args(sys.argv[1:]) # parse the arguments provided by user
+    main(args) # run the program
