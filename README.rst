@@ -65,7 +65,7 @@ Arguments
 
 ``-c``: a constant c in the equations above, default to 5.
 
-``--input, -i``: an input file that contains the position and potential energy
+``--input, -i``: an input file path that contains the position and potential energy
 of the system in a given time step. There is an exmple of the input file in 
 the schrodinger_equation_solver package folder. In order to make the program 
 work, one has to follow the same format to that file. 
