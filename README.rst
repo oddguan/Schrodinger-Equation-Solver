@@ -7,12 +7,12 @@ Schrodinger Equation Solver
     :target: https://travis-ci.org/oddguan/Schrodinger-Equation-Solver
 
 .. image:: https://coveralls.io/repos/github/oddguan/Schrodinger-Equation-Solver/badge.svg?branch=master
-:target: https://coveralls.io/github/oddguan/Schrodinger-Equation-Solver?branch=master
+    :target: https://coveralls.io/github/oddguan/Schrodinger-Equation-Solver?branch=master
 
 
 
 
-Python Boilerplate contains all the boilerplate you need to create a Python package.
+Schrodinger Equation Solver implemented in Python with TensorFlow
 
 
 * Free software: MIT license
