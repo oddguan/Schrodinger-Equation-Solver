@@ -31,11 +31,11 @@ Where H is an opereator that maps from L2 of complex functions to L2.
 
 The inner product is defined as followed:
 
-.. iamge:: innerproduct.png
+.. image:: innerproduct.png
 
 The definition of the H times Psi is:
 
-..image:: hamiltonian.png
+.. image:: hamiltonian.png
 
 The goal of the project is to first project the hamiltonian into a fourier 
 basis set, and solve the wavefunction representation corresponding to the lowest
@@ -65,7 +65,7 @@ Arguments
 
 ``-c``: a constant c in the equations above, default to 5.
 
-``--input, -i``: a input file that contains the position and potential energy
+``--input, -i``: an input file that contains the position and potential energy
 of the system in a given time step. There is an exmple of the input file in 
 the schrodinger_equation_solver package folder. In order to make the program 
 work, one has to follow the same format to that file. 
