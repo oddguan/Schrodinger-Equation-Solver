@@ -15,7 +15,7 @@ install:
 
 # Command to run tests, e.g. python setup.py test
 script: 
-- coverage run --source=lds setup.py test
+- coverage run --source=schrodinger_equation_solver setup.py test
 - coverage report -m
 
 after_success: coveralls
