@@ -5,11 +5,15 @@
 import sys
 import argparse
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.enable_eager_execution() 
+# eager execution enables tensor to be evaluated as the program goes
 
 def parse_args(args):
     '''
-    Parsing arguments into variables
+    Parsing arguments into variables.
+
+    Args:
+        args: sys arguments variable
     '''
     parser = argparse.ArgumentParser()
 
@@ -17,11 +21,12 @@ def parse_args(args):
     default='schrodinger_equation_solver/potential_energy.dat', \
     help='The path to the potential energy table')
 
-    parser.add_argument('-c', type=float, required=True, \
-    default='1', \
+    parser.add_argument('-c', type=float, \
+    default=5.0, \
     help='The constant c in the equation')
 
-    parser.add_argument('-s', '--size', type=int, required=True, \
+    parser.add_argument('-s', '--size', type=int, \
+    default=3,
     help='The size of the basis set')
 
     return vars(parser.parse_args(args))
@@ -35,8 +40,8 @@ def parse_file(file):
     file: the path to the input potential energy file
 
     Returns:
-    position: a position list 
-    potential_energy: a potential energy list
+    position: a position tensor object
+    potential_energy: a potential energy tensor object
     '''
     position = list()
     potential_energy = list()
@@ -53,6 +58,13 @@ def parse_file(file):
     potential_energy = tf.constant(potential_energy, tf.float32)
     return position, potential_energy
         
+def fourier_n(n):
+    if n == 0:
+        return lambda x: tf.ones([x.shape[0]], tf.float32)
+    elif n % 2 == 1:
+        return lambda x: tf.math.sin((n+1)/2 * x)
+    else:
+        return lambda x: tf.math.cos(n / 2 * x)
 
 def form_basis(size):
     '''
@@ -66,12 +78,16 @@ def form_basis(size):
     '''
     basis = list()
     for i in range(size):
-        if i == 0:
-            basis.append(lambda x: tf.math.sin(x) - tf.math.sin(x) + 1)
-        elif i % 2 == 1: # sin function
-            basis.append(lambda x: tf.math.sin((i+1)/2*x))
-        else: #cos function
-            basis.append(lambda x: tf.math.cos((i/2)*x))
+        basis.append(fourier_n(i))
+        # if i == 0:
+        #     basis.append(lambda x: tf.ones([x.shape[0]], tf.float32))
+        # elif i % 2 == 1: # sin function
+        #     print((i+1)/2)
+        #     basis.append(lambda x: tf.math.sin(((i+1)/2)*x))
+        # else: #cos function
+        #     print((i)/2)
+        #     basis.append(lambda x: tf.math.cos((i/2)*x))
+    #print(basis)
     return basis
 
 def form_matrix(c, size):
@@ -113,7 +129,7 @@ def calculate_inner_V0_b(position, potential_energy, basis):
         if i == 0:
             continue
         row = tf.concat([row, tf.reshape(tf.multiply(b(position), potential_energy),[1,length])], 0)
-        #print(row.shape)
+        #print(row)
     row = tf.reduce_sum(row, 1)
     #print(row)
     return row
@@ -163,17 +179,18 @@ def main(args):
     basis = form_basis(args['size'])
     #print("len of basis: ", len(basis))
     matrix = form_matrix(args['c'], args['size'])
-    print("matrix: ", matrix)
+    #print("matrix: ", matrix)
     rhs = calculate_inner_V0_b(position, potential_energy, basis)
-    print("rhs: ", rhs)
+    #print("rhs: ", rhs)
     lhs = calculate_inner_V0hat_b(position, basis)
-    print("lhs: ", lhs)
+    #print("lhs: ", lhs)
     a_tensor = tf.linalg.solve(lhs,tf.reshape(rhs,[rhs.shape[0],1]))
-    print(a_tensor)
+    #print(a_tensor)
     H = form_H(a_tensor, matrix, args['size'])
     e,v = tf.linalg.eigh(H)
     print("The lowest energy is: ", e[0].numpy())
     print("The coefficient for the basis set of the corresponding wavefunction is: ", v[0].numpy())
+    return e, v
 
 if __name__ == "__main__":
     import os; os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
